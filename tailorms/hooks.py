@@ -95,8 +95,8 @@ app_license = "mit"
 # Installation
 # ------------
 
-# before_install = "tailorms.install.before_install"
-# after_install = "tailorms.install.after_install"
+after_install = "tailorms.setup.setup_pos_desktop"
+after_migrate = "tailorms.setup.setup_pos_desktop"
 
 # Uninstallation
 # ------------
