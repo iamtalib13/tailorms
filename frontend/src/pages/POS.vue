@@ -4,10 +4,8 @@
     <aside class="w-16 bg-white border-r border-gray-200 flex flex-col justify-between items-center py-3 flex-shrink-0 z-30 shadow-xs">
       <div class="flex flex-col items-center gap-4 w-full">
         <!-- Brand Icon -->
-        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-xs text-white font-bold text-lg">
-          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/>
-          </svg>
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-xs">
+          <span class="lucide-scissors size-5 text-white" />
         </div>
 
         <!-- Navigation Links (Vertical Icon + Label Badge) -->
@@ -19,8 +17,8 @@
             class="w-full flex flex-col items-center justify-center py-2 rounded-xl transition group"
             title="Point of Sale"
           >
-            <span class="text-lg">🛒</span>
-            <span class="text-[10px] mt-0.5 leading-tight tracking-tight">POS</span>
+            <span class="lucide-shopping-cart size-5" />
+            <span class="text-[10px] mt-1 leading-tight tracking-tight">POS</span>
           </button>
 
           <!-- 2. Invoices -->
@@ -30,19 +28,19 @@
             class="w-full flex flex-col items-center justify-center py-2 rounded-xl transition group"
             title="Sales Invoices"
           >
-            <span class="text-lg">🧾</span>
-            <span class="text-[10px] mt-0.5 leading-tight tracking-tight">Invoices</span>
+            <span class="lucide-receipt size-5" />
+            <span class="text-[10px] mt-1 leading-tight tracking-tight">Invoices</span>
           </button>
 
-          <!-- 3. Stock Entry -->
+          <!-- 3. Purchase Entry -->
           <button
             @click="switchTab('stock')"
             :class="currentTab === 'stock' ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'"
             class="w-full flex flex-col items-center justify-center py-2 rounded-xl transition group"
-            title="Stock Entries"
+            title="Purchase Entries"
           >
-            <span class="text-lg">📦</span>
-            <span class="text-[9.5px] mt-0.5 leading-tight tracking-tight">Stock</span>
+            <span class="lucide-package size-5" />
+            <span class="text-[9.5px] mt-1 leading-tight tracking-tight">Purchase</span>
           </button>
         </nav>
       </div>
@@ -54,100 +52,58 @@
           class="w-full flex flex-col items-center justify-center py-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
           title="Go to Desk"
         >
-          <span class="text-sm font-bold">↗</span>
-          <span class="text-[9px] mt-0.5">Desk</span>
+          <span class="lucide-external-link size-4" />
+          <span class="text-[9px] mt-1">Desk</span>
         </button>
       </div>
     </aside>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Top Header Bar -->
-      <header class="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-2xs z-20">
-        <div class="flex items-center gap-2">
-          <h2 class="text-base font-bold text-gray-900 capitalize">
-            {{ currentTab === 'pos' ? 'Point of Sale' : currentTab === 'items' ? 'Item Catalogue' : currentTab === 'invoices' ? 'Sales Invoices' : 'Stock Entries' }}
-          </h2>
-          <span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-md">Live</span>
-        </div>
+    <div class="flex-1 flex overflow-hidden">
+      <!-- Left Main Body (No top header for POS, full space) -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Header Bar (Items management only; Purchase/Invoices have their own headers) -->
+        <header
+          v-if="currentTab === 'items'"
+          class="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-2xs z-20 shrink-0"
+        >
+          <div class="flex items-center gap-3">
+            <h2 class="text-base font-bold text-gray-900">Item Catalogue</h2>
+            <span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-md">Live</span>
+          </div>
+        </header>
 
-        <!-- Action Items -->
-        <div class="flex items-center gap-2">
-          <!-- POS Quick Add Brand & Item Buttons -->
-          <button
-            v-if="currentTab === 'pos' || currentTab === 'items'"
-            @click="showCreateTemplateModal = true"
-            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center gap-1 transition shadow-2xs"
-          >
-            <span>+ Brand</span>
-          </button>
-          <button
-            v-if="currentTab === 'pos' || currentTab === 'items'"
-            @click="openVariantModal()"
-            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition shadow-xs"
-          >
-            <span>+ Item</span>
-          </button>
-          <button
-            v-if="currentTab === 'pos'"
-            @click="showAddCustomer = true"
-            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1 transition"
-          >
-            <span>+ Customer</span>
-          </button>
-          <button
-            @click="refreshCurrentTab"
-            class="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition"
-            title="Refresh"
-          >
-            <svg class="w-4 h-4" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      <!-- View 1: POS Screen -->
-      <div v-show="currentTab === 'pos'" class="flex-1 flex overflow-hidden">
-        <!-- Left Column: Items Selector with Filter Tabs -->
+        <!-- View 1: POS Screen Left Column -->
+        <div v-show="currentTab === 'pos'" class="flex-1 flex overflow-hidden">
         <section class="flex-1 flex flex-col bg-gray-50 overflow-hidden border-r border-gray-200">
         <!-- Brand Items Capsule Bar -->
-        <div class="px-3.5 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
-          <div class="flex items-center gap-2 overflow-x-auto scrollbar-none">
-            <button
-              @click="selectedTemplate = ''"
-              :class="!selectedTemplate ? 'bg-blue-50 text-blue-600 border-2 border-blue-500 font-bold' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'"
-              class="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition shadow-xs"
-            >
-              All Brands
-            </button>
-            <button
-              v-for="tmpl in templates"
-              :key="tmpl.item_code"
-              @click="selectedTemplate = tmpl.item_code"
-              :class="selectedTemplate === tmpl.item_code ? 'bg-blue-50 text-blue-600 border-2 border-blue-500 font-bold' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'"
-              class="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition shadow-xs"
-            >
-              {{ tmpl.item_name || tmpl.item_code }}
-            </button>
-          </div>
+        <div class="px-3.5 py-2.5 bg-white border-b border-gray-200 flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <!-- + Brand Button before All Brands -->
+          <button
+            @click="showCreateTemplateModal = true"
+            class="px-3 py-1.5 rounded-[11px] text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs flex items-center gap-1 shrink-0 whitespace-nowrap"
+            title="Create Brand"
+          >
+            <span class="lucide-plus size-3.5" />
+            <span>Brand</span>
+          </button>
 
-          <div class="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              @click="showCreateTemplateModal = true"
-              class="px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg border border-dashed border-blue-300 transition flex items-center gap-1 whitespace-nowrap"
-              title="Add New Brand"
-            >
-              <span>+ Brand</span>
-            </button>
-            <button
-              @click="openVariantModal(selectedTemplate)"
-              class="px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg border border-dashed border-emerald-300 transition flex items-center gap-1 whitespace-nowrap"
-              title="Add New Item"
-            >
-              <span>+ Item</span>
-            </button>
-          </div>
+          <button
+            @click="selectedTemplate = ''"
+            :class="!selectedTemplate ? 'bg-blue-50 text-blue-600 border-2 border-blue-500 font-bold' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'"
+            class="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition shadow-xs"
+          >
+            All Brands
+          </button>
+          <button
+            v-for="tmpl in templates"
+            :key="tmpl.item_code"
+            @click="selectedTemplate = tmpl.item_code"
+            :class="selectedTemplate === tmpl.item_code ? 'bg-blue-50 text-blue-600 border-2 border-blue-500 font-bold' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'"
+            class="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition shadow-xs"
+          >
+            {{ tmpl.item_name || tmpl.item_code }}
+          </button>
         </div>
 
         <!-- Search Bar with Instant Filter -->
@@ -174,6 +130,18 @@
 
         <!-- Items Grid Cards (Dense, Compact Tiles with 14px Readable Standard Font) -->
         <div class="flex-1 overflow-y-auto p-3 content-start grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
+          <!-- First Card: Always + Add Item Card -->
+          <button
+            @click="openVariantModal(selectedTemplate)"
+            class="group relative rounded-xl p-2.5 h-20 self-start flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/40 transition-all text-gray-400 hover:text-emerald-700 shadow-2xs cursor-pointer active:scale-[0.98]"
+            title="Add New Item"
+          >
+            <div class="w-7 h-7 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center text-emerald-600 transition">
+              <span class="lucide-plus size-4" />
+            </div>
+            <span class="text-xs font-bold mt-1 text-gray-700 group-hover:text-emerald-700">Add Item</span>
+          </button>
+
           <div
             v-for="item in filteredItems"
             :key="item.item_code"
@@ -185,32 +153,28 @@
                 : 'bg-white border border-gray-200 hover:border-blue-500 hover:shadow-sm cursor-pointer active:scale-[0.98]'
             ]"
           >
-            <!-- Available Qty Badge (Capsule: Green if in stock, Red if 0/out of stock) -->
+            <!-- Available Qty Badge (POS Next style: overlapping pill badge at top-right) -->
             <div
               v-if="item.is_stock_item"
               :class="[
-                'absolute -top-2 -end-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold shadow-sm border-2 border-white select-none leading-tight',
-                Number(item.actual_qty || 0) <= 0 ? 'bg-red-500 text-white' : 'bg-emerald-600 text-white'
+                'absolute -top-2.5 -right-2 z-20 px-2.5 py-0.5 rounded-full text-xs font-black text-white shadow-xs select-none leading-none tracking-tight flex items-center justify-center min-w-[28px] h-5',
+                Number(item.actual_qty || 0) <= 0 ? 'bg-[#ef4444]' : 'bg-[#22c55e]'
               ]"
               :title="Number(item.actual_qty || 0) <= 0 ? 'Out of stock' : `Available Stock: ${item.actual_qty ?? 0}`"
             >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :class="Number(item.actual_qty || 0) <= 0 ? 'bg-red-200' : 'bg-emerald-200 animate-pulse'"
-              ></span>
-              <span>{{ Math.floor(item.actual_qty ?? 0) }}</span>
+              {{ Math.floor(item.actual_qty ?? 0) }}
             </div>
 
-            <!-- Cart Count Badge (top-start if in cart) -->
+            <!-- Cart Count Badge (top-left inside card) -->
             <div
               v-if="getItemCartQty(item.item_code)"
-              class="absolute -top-1.5 -start-1.5 rounded-full shadow-xs z-10 w-5 h-5 flex items-center justify-center text-xs font-bold border border-white bg-blue-600 text-white select-none"
+              class="absolute -top-1.5 -left-1.5 rounded-[11px] shadow-xs z-10 px-1.5 h-5 min-w-[20px] flex items-center justify-center text-[10px] font-bold border border-white bg-blue-600 text-white select-none"
             >
               {{ getItemCartQty(item.item_code) }}
             </div>
 
             <!-- Item Header -->
-            <div class="min-w-0">
+            <div class="min-w-0 pr-6">
               <h3
                 class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition leading-snug truncate"
                 :title="item.item_name || item.item_code"
@@ -224,11 +188,22 @@
 
             <!-- Bottom Price & UOM -->
             <div class="pt-1 border-t border-gray-100 flex items-center justify-between text-xs leading-tight">
-              <span class="text-gray-500 text-xs truncate">{{ item.stock_uom || 'Nos' }}</span>
-              <span v-if="item.selling_price != null" class="font-extrabold text-blue-600 text-sm">
-                ₹{{ Number(item.selling_price).toFixed(2) }}
-              </span>
-              <span v-else class="text-xs text-gray-400 italic">No price</span>
+              <div v-if="item.selling_price != null" class="flex items-baseline gap-1">
+                <span class="font-extrabold text-blue-600 text-sm">
+                  ₹{{ Number(item.selling_price).toFixed(2) }}
+                </span>
+                <span class="text-gray-500 text-xs">/ {{ item.stock_uom || 'Nos' }}</span>
+              </div>
+              <span v-else class="text-xs text-amber-600 font-semibold bg-amber-50 px-1 py-0.5 rounded border border-amber-200">No price</span>
+
+              <!-- Edit Price Button -->
+              <button
+                @click.stop="openPriceEditModal(item)"
+                class="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                title="Edit / Set Selling Price"
+              >
+                <span class="lucide-pencil size-3.5" />
+              </button>
             </div>
           </div>
 
@@ -238,23 +213,23 @@
         </div>
       </section>
 
-      <!-- Right Column: Shopping Cart (Exact POS Next structure) -->
-      <section class="w-[380px] bg-white flex flex-col shadow-xl z-20">
-        <!-- Customer Selection Card (ERPNext POS Search & Select) -->
-        <div class="p-3 border-b border-gray-200 bg-gray-50/70 relative">
+      <!-- Right Column: Shopping Cart (Full Height Screen Layout for POS) -->
+      <aside class="w-[380px] bg-white flex flex-col shadow-xl z-20 border-l border-gray-200 h-full flex-shrink-0">
+        <!-- Customer Selection Card (Matching Brand Bar Height & Frappe UI Lucide Icons) -->
+        <div class="px-3.5 py-2.5 border-b border-gray-200 bg-white relative flex items-center min-h-[49px]">
           <!-- Selected Customer Card -->
-          <div v-if="selectedCustomerDoc" class="flex items-center justify-between bg-white border border-gray-200 rounded-xl p-2.5 shadow-xs">
-            <div class="flex items-center gap-2.5 min-w-0 flex-1">
-              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
-                {{ selectedCustomerDoc.customer_name?.charAt(0).toUpperCase() || 'C' }}
+          <div v-if="selectedCustomerDoc" class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <div class="w-7 h-7 rounded-[11px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200">
+                <span class="lucide-user size-4" />
               </div>
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0 flex-1 leading-tight">
                 <div class="text-sm font-bold text-gray-900 truncate">
                   {{ selectedCustomerDoc.customer_name }}
                 </div>
-                <div class="text-xs text-gray-500 truncate flex items-center gap-1.5 mt-0.5">
-                  <span v-if="selectedCustomerDoc.mobile_no" class="text-blue-600 font-medium">📞 {{ selectedCustomerDoc.mobile_no }}</span>
-                  <span v-else class="text-gray-400">No mobile</span>
+                <div class="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                  <span v-if="selectedCustomerDoc.mobile_no" class="text-blue-600 font-medium">{{ selectedCustomerDoc.mobile_no }}</span>
+                  <span v-else class="text-gray-400">Walk-in</span>
                 </div>
               </div>
             </div>
@@ -262,35 +237,39 @@
             <!-- Change Customer Button -->
             <button
               @click="toggleCustomerSearch"
-              class="px-2.5 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded-lg font-semibold transition"
+              class="px-2.5 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded-[11px] font-semibold transition shrink-0 ml-2 border border-blue-200/70"
             >
               Change
             </button>
           </div>
 
           <!-- Customer Live Search Field -->
-          <div v-else class="relative">
-            <div class="relative">
+          <div v-else ref="customerSearchContainer" class="relative w-full">
+            <div class="relative flex items-center">
+              <span class="absolute left-2.5 text-gray-400 flex items-center pointer-events-none">
+                <span class="lucide-user size-4" />
+              </span>
               <input
                 v-model="customerSearchInput"
                 @focus="isCustomerDropdownOpen = true"
+                @keydown.esc="isCustomerDropdownOpen = false"
                 type="text"
-                placeholder="Search by customer name or phone..."
-                class="w-full bg-white border border-gray-300 rounded-xl pl-8 pr-20 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                placeholder="Search customer by name or phone..."
+                class="w-full bg-gray-50 border border-gray-200 rounded-[11px] pl-8 pr-16 py-1.5 text-xs font-medium text-gray-800 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition h-8"
               />
-              <span class="absolute left-2.5 top-2.5 text-gray-400 text-sm">👤</span>
               <button
                 @click="showAddCustomer = true"
-                class="absolute right-1.5 top-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition"
+                class="absolute right-1.5 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition shadow-2xs h-6 flex items-center gap-1"
               >
-                + New
+                <span class="lucide-plus size-3 text-white" />
+                <span class="text-white">New</span>
               </button>
             </div>
 
             <!-- Dropdown Results -->
             <div
               v-if="isCustomerDropdownOpen"
-              class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-56 overflow-y-auto z-40 divide-y divide-gray-100"
+              class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-[11px] shadow-xl max-h-56 overflow-y-auto z-40 divide-y divide-gray-100"
             >
               <div
                 v-for="c in searchedCustomers"
@@ -318,10 +297,10 @@
         <!-- Cart Items List -->
         <div class="flex-1 overflow-y-auto p-3 space-y-2">
           <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl mb-2 text-gray-400">
-              🛒
+            <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-2.5 text-gray-400 border border-gray-200">
+              <span class="lucide-shopping-cart size-6 text-gray-400" />
             </div>
-            <span class="text-sm font-bold text-gray-500">Cart is empty</span>
+            <span class="text-sm font-bold text-gray-600">Cart is empty</span>
             <span class="text-xs text-gray-400 mt-0.5">Click any item from catalogue</span>
           </div>
 
@@ -337,16 +316,24 @@
               </div>
             </div>
 
-            <!-- Qty Stepper Controls -->
-            <div class="flex items-center bg-white border border-gray-300 rounded-lg p-0.5 shadow-xs">
+            <!-- Qty Stepper & Input Controls -->
+            <div class="flex items-center bg-white border border-gray-300 rounded-[11px] p-0.5 shadow-xs">
               <button
                 @click.stop="decreaseQty(idx)"
-                class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded text-sm font-bold"
+                class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-[11px] text-sm font-bold"
               >-</button>
-              <span class="text-sm font-extrabold w-7 text-center text-gray-900">{{ row.qty }}</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                :value="row.qty"
+                @click.stop
+                @change="updateCartRowQty(idx, $event.target.value)"
+                class="w-14 text-center font-extrabold text-sm text-gray-900 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 p-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
               <button
                 @click.stop="increaseQty(idx)"
-                class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded text-sm font-bold"
+                class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-[11px] text-sm font-bold"
               >+</button>
             </div>
           </div>
@@ -354,19 +341,92 @@
 
         <!-- Totals & Payment Section -->
         <div class="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
-          <!-- Quick Mode of Payment Tabs -->
+          <!-- Quick Mode of Payment Tabs (Cash, UPI, Split) -->
           <div>
-            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Payment Method</div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Payment Method</span>
+              <span v-if="selectedPaymentMode === 'Split'" class="text-[11px] font-semibold text-blue-600 lowercase">
+                cash + upi
+              </span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
               <button
-                v-for="m in paymentModes.slice(0, 4)"
-                :key="m"
-                @click="selectedPaymentMode = m"
-                :class="selectedPaymentMode === m ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold shadow-xs' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'"
-                class="px-2.5 py-2 border rounded-lg text-sm text-center transition"
+                @click="setPaymentMode('Cash')"
+                :class="selectedPaymentMode === 'Cash' ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold shadow-xs ring-1 ring-blue-500/20' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'"
+                class="px-2 py-2 border rounded-lg text-xs font-medium text-center transition flex items-center justify-center gap-1"
               >
-                {{ m }}
+                <span class="lucide-banknote size-3.5" />
+                <span>Cash</span>
               </button>
+              <button
+                @click="setPaymentMode('UPI')"
+                :class="selectedPaymentMode === 'UPI' ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold shadow-xs ring-1 ring-blue-500/20' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'"
+                class="px-2 py-2 border rounded-lg text-xs font-medium text-center transition flex items-center justify-center gap-1"
+              >
+                <span class="lucide-qr-code size-3.5" />
+                <span>UPI</span>
+              </button>
+              <button
+                @click="setPaymentMode('Split')"
+                :class="selectedPaymentMode === 'Split' ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold shadow-xs ring-1 ring-blue-500/20' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'"
+                class="px-2 py-2 border rounded-lg text-xs font-medium text-center transition flex items-center justify-center gap-1"
+              >
+                <span class="lucide-split size-3.5" />
+                <span>Split</span>
+              </button>
+            </div>
+
+            <!-- Split Payment Breakdown Inputs -->
+            <div v-if="selectedPaymentMode === 'Split'" class="mt-2.5 p-2.5 bg-white border border-blue-200 rounded-xl space-y-2 shadow-2xs">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-bold text-gray-600 mb-1 flex items-center gap-1">
+                    <span class="lucide-banknote size-3 text-emerald-600" />
+                    <span>Cash Amount</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-2.5 top-2 text-xs text-gray-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      :max="subtotal"
+                      v-model.number="splitCashAmount"
+                      @input="onSplitCashChange"
+                      class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-6 pr-2 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold text-gray-600 mb-1 flex items-center gap-1">
+                    <span class="lucide-qr-code size-3 text-blue-600" />
+                    <span>UPI Amount</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-2.5 top-2 text-xs text-gray-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      :max="subtotal"
+                      v-model.number="splitUpiAmount"
+                      @input="onSplitUpiChange"
+                      class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-6 pr-2 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Split Balance Indicator -->
+              <div class="flex items-center justify-between text-[11px] font-medium pt-1 border-t border-gray-100">
+                <span class="text-gray-500">Allocated: ₹{{ (Number(splitCashAmount || 0) + Number(splitUpiAmount || 0)).toFixed(2) }}</span>
+                <span
+                  :class="splitDifference === 0 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'"
+                >
+                  {{ splitDifference === 0 ? '✓ Balanced' : `Diff: ₹${splitDifference.toFixed(2)}` }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -392,8 +452,8 @@
             <span v-else>Pay & Print (₹{{ subtotal.toFixed(2) }})</span>
           </button>
         </div>
-      </section>
-    </div>
+      </aside>
+      </div>
 
       <!-- View 1.5: Items Management Screen (Exact POS Cards Layout + Brand & Item Creator) -->
       <div v-show="currentTab === 'items'" class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
@@ -433,22 +493,36 @@
 
         <!-- Items Cards Grid (Same Compact & Readable Cards) -->
         <div class="flex-1 overflow-y-auto p-4 content-start grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          <!-- First Card: Always + Add Item Card in Items Tab -->
+          <button
+            @click="openVariantModal(itemsTabSelectedTemplate)"
+            class="group relative bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 rounded-xl p-2.5 transition-all shadow-2xs hover:bg-emerald-50/40 flex flex-col items-center justify-center h-24 self-start cursor-pointer active:scale-[0.98]"
+            title="Add New Item"
+          >
+            <div class="w-8 h-8 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center text-emerald-600 transition">
+              <span class="lucide-plus size-4" />
+            </div>
+            <span class="text-xs font-bold mt-1.5 text-gray-700 group-hover:text-emerald-700">Add Item</span>
+          </button>
+
           <div
             v-for="item in itemsTabFilteredList"
             :key="item.item_code"
             class="group relative bg-white border border-gray-200 hover:border-blue-500 rounded-xl p-2.5 transition-all shadow-xs hover:shadow-sm flex flex-col justify-between h-24 self-start"
           >
-            <!-- Available Stock Badge -->
+            <!-- Available Stock Badge (POS Next style: overlapping pill badge at top-right) -->
             <div
               v-if="item.is_stock_item"
-              class="absolute -top-2 -end-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-600 text-white shadow-sm border-2 border-white select-none leading-tight"
+              :class="[
+                'absolute -top-2.5 -right-2 z-20 px-2.5 py-0.5 rounded-full text-xs font-black text-white shadow-xs select-none leading-none tracking-tight flex items-center justify-center min-w-[28px] h-5',
+                Number(item.actual_qty || 0) <= 0 ? 'bg-[#ef4444]' : 'bg-[#22c55e]'
+              ]"
             >
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-200"></span>
-              <span>{{ Math.floor(item.actual_qty ?? 0) }}</span>
+              {{ Math.floor(item.actual_qty ?? 0) }}
             </div>
 
             <!-- Item Info -->
-            <div class="min-w-0">
+            <div class="min-w-0 pr-6">
               <span
                 v-if="item.variant_of"
                 class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200"
@@ -463,11 +537,22 @@
 
             <!-- Price & Actions -->
             <div class="pt-1 border-t border-gray-100 flex items-center justify-between text-xs">
-              <span class="text-gray-400">{{ item.stock_uom || 'Nos' }}</span>
-              <span v-if="item.selling_price != null" class="font-extrabold text-blue-600 text-sm">
-                ₹{{ Number(item.selling_price).toFixed(2) }}
-              </span>
-              <span v-else class="text-xs text-gray-400 italic">No price</span>
+              <div v-if="item.selling_price != null" class="flex items-baseline gap-1">
+                <span class="font-extrabold text-blue-600 text-sm">
+                  ₹{{ Number(item.selling_price).toFixed(2) }}
+                </span>
+                <span class="text-gray-500 text-xs">/ {{ item.stock_uom || 'Nos' }}</span>
+              </div>
+              <span v-else class="text-xs text-amber-600 font-semibold bg-amber-50 px-1 py-0.5 rounded border border-amber-200">No price</span>
+
+              <!-- Edit Price Button -->
+              <button
+                @click.stop="openPriceEditModal(item)"
+                class="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                title="Edit / Set Selling Price"
+              >
+                <span class="lucide-pencil size-3.5" />
+              </button>
             </div>
           </div>
 
@@ -477,125 +562,20 @@
         </div>
       </div>
 
-      <!-- View 2: Invoices List View -->
-      <div v-show="currentTab === 'invoices'" class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
-        <div class="max-w-5xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
-          <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-            <div>
-              <h3 class="text-base font-bold text-gray-900">Recent Invoices</h3>
-              <p class="text-xs text-gray-500">Sales invoices created via POS and ERP</p>
-            </div>
-            <button
-              @click="loadInvoices"
-              class="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Refresh Invoices
-            </button>
-          </div>
+      <!-- View 2: Invoices List View (Component-based Full Width) -->
+      <InvoicesView
+        v-show="currentTab === 'invoices'"
+        :invoices="invoices"
+        @print="printInvoice"
+      />
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200 text-xs uppercase">
-                <tr>
-                  <th class="py-3 px-4">Invoice</th>
-                  <th class="py-3 px-4">Customer</th>
-                  <th class="py-3 px-4">Date</th>
-                  <th class="py-3 px-4">Status</th>
-                  <th class="py-3 px-4 text-right">Grand Total</th>
-                  <th class="py-3 px-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="inv in invoices" :key="inv.name" class="hover:bg-blue-50/40 transition">
-                  <td class="py-3 px-4 font-bold text-blue-600 font-mono">{{ inv.name }}</td>
-                  <td class="py-3 px-4 font-medium text-gray-900">{{ inv.customer_name || inv.customer }}</td>
-                  <td class="py-3 px-4 text-gray-500 text-xs">{{ inv.posting_date }}</td>
-                  <td class="py-3 px-4">
-                    <span
-                      class="px-2 py-0.5 rounded text-xs font-bold"
-                      :class="inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'"
-                    >
-                      {{ inv.status }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 text-right font-extrabold text-gray-900">₹{{ Number(inv.grand_total).toFixed(2) }}</td>
-                  <td class="py-3 px-4 text-center">
-                    <button
-                      @click="printInvoice(inv.name)"
-                      class="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition inline-flex items-center gap-1 shadow-2xs"
-                      title="Print Invoice"
-                    >
-                      <span>🖨️</span>
-                      <span>Print</span>
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="invoices.length === 0">
-                  <td colspan="6" class="py-8 text-center text-gray-400">No invoices found</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- View 3: Stock Entry List View -->
-      <div v-show="currentTab === 'stock'" class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
-        <div class="max-w-5xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
-          <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-            <div>
-              <h3 class="text-base font-bold text-gray-900">Stock Entries</h3>
-              <p class="text-xs text-gray-500">Material receipts, issues, and manufacture transfers</p>
-            </div>
-            <div class="flex gap-2">
-              <a
-                href="/desk#Form/Stock Entry/new-stock-entry-1"
-                class="px-3 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs"
-              >
-                + New Stock Entry
-              </a>
-              <button
-                @click="loadStockEntries"
-                class="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200 text-xs uppercase">
-                <tr>
-                  <th class="py-3 px-4">Entry ID</th>
-                  <th class="py-3 px-4">Purpose / Type</th>
-                  <th class="py-3 px-4">Date</th>
-                  <th class="py-3 px-4">Status</th>
-                  <th class="py-3 px-4 text-right">Value</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="stk in stockEntries" :key="stk.name" class="hover:bg-blue-50/40 transition">
-                  <td class="py-3 px-4 font-bold text-blue-600 font-mono">{{ stk.name }}</td>
-                  <td class="py-3 px-4 font-medium text-gray-900">{{ stk.stock_entry_type || stk.purpose }}</td>
-                  <td class="py-3 px-4 text-gray-500 text-xs">{{ stk.posting_date }}</td>
-                  <td class="py-3 px-4">
-                    <span
-                      class="px-2 py-0.5 rounded text-xs font-bold"
-                      :class="stk.docstatus === 1 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
-                    >
-                      {{ stk.docstatus === 1 ? 'Submitted' : 'Draft' }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 text-right font-extrabold text-gray-900">₹{{ Number(stk.total_amount || 0).toFixed(2) }}</td>
-                </tr>
-                <tr v-if="stockEntries.length === 0">
-                  <td colspan="5" class="py-8 text-center text-gray-400">No stock entries found</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <!-- View 3: Purchase Entries (component) -->
+      <PurchaseView
+        v-show="currentTab === 'stock'"
+        :entries="stockEntries"
+        :items="items"
+        @refresh="loadStockEntries"
+      />
       </div>
     </div>
 
@@ -617,13 +597,19 @@
             />
           </div>
           <div>
-            <label class="text-[11px] font-semibold text-gray-600 block mb-1">Mobile No</label>
+            <label class="text-[11px] font-semibold text-gray-600 block mb-1">Mobile No (10 Digits)</label>
             <input
               v-model="newCustomerMobile"
-              type="text"
+              type="tel"
+              maxlength="10"
               placeholder="e.g. 9876543210"
-              class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="newCustomerMobile = newCustomerMobile.replace(/\D/g, '').slice(0, 10)"
+              class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2"
+              :class="newCustomerMobile && newCustomerMobile.length !== 10 ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-300 focus:ring-blue-500'"
             />
+            <p v-if="newCustomerMobile && newCustomerMobile.length !== 10" class="text-[10px] text-red-500 mt-1">
+              Mobile number must be exactly 10 digits ({{ newCustomerMobile.length }}/10)
+            </p>
           </div>
         </div>
 
@@ -636,7 +622,8 @@
           </button>
           <button
             @click="addNewCustomer"
-            class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+            :disabled="!newCustomerName.trim() || (newCustomerMobile && newCustomerMobile.length !== 10)"
+            class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save
           </button>
@@ -740,11 +727,31 @@
               v-model="newVariantCode"
               type="text"
               placeholder="e.g. 004, Blue, 102"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2"
+              :class="isVariantAlreadyExists ? 'border-amber-400 bg-amber-50/40 text-amber-900 focus:ring-amber-400' : 'border-gray-300 focus:ring-blue-500'"
             />
-            <p v-if="newVariantTemplate && newVariantCode" class="text-[11px] text-gray-500 mt-1">
-              Full Item Code: <b class="text-blue-600 font-mono">{{ newVariantTemplate }}-{{ newVariantCode }}</b>
-            </p>
+            <div v-if="newVariantTemplate && newVariantCode" class="mt-1.5">
+              <p class="text-[11px] text-gray-500">
+                Full Item Code: <b class="font-mono text-gray-900">{{ fullVariantCode }}</b>
+              </p>
+              <div
+                v-if="isVariantAlreadyExists"
+                class="mt-1 flex items-center justify-between p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs"
+              >
+                <div class="flex items-center gap-1.5">
+                  <span class="lucide-alert-circle size-3.5 text-amber-600 flex-shrink-0" />
+                  <span>Item already added!</span>
+                </div>
+                <button
+                  type="button"
+                  @click="showCreateVariantModal = false; openPriceEditModal(existingVariantItem)"
+                  class="text-[11px] font-bold text-amber-900 hover:underline inline-flex items-center gap-0.5"
+                >
+                  <span>Edit Price (₹{{ existingVariantItem?.selling_price || 0 }})</span>
+                  <span class="lucide-pencil size-3" />
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Selling Price -->
@@ -760,20 +767,86 @@
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
+        <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
           <button
+            type="button"
             @click="showCreateVariantModal = false"
-            class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+            class="px-3 py-2 text-xs text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
           >
             Cancel
           </button>
           <button
+            type="button"
             @click="submitCreateVariant"
-            :disabled="isSubmittingVariant || !newVariantTemplate || !newVariantCode"
-            class="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm disabled:opacity-50"
+            :disabled="isSubmittingVariant || !newVariantTemplate || !newVariantCode.trim() || isVariantAlreadyExists"
+            class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
+            <span v-if="isSubmittingVariant" class="lucide-loader-2 size-3 animate-spin" />
             <span v-if="isSubmittingVariant">Saving...</span>
+            <span v-else-if="isVariantAlreadyExists">Already Exists</span>
             <span v-else>Save Item</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Selling Price Modal -->
+    <div
+      v-if="showPriceEditModal"
+      class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="lucide-pencil size-4 text-blue-600" />
+            <h3 class="text-sm font-bold text-gray-900">Set Selling Price</h3>
+          </div>
+          <button
+            @click="showPriceEditModal = false"
+            class="text-gray-400 hover:text-gray-600 text-sm"
+          >✕</button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs">
+            <div class="font-bold text-gray-900">{{ editingItem?.item_name || editingItem?.item_code }}</div>
+            <div class="text-gray-500 font-mono mt-0.5">{{ editingItem?.item_code }}</div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Rate / Price (₹ per {{ editingItem?.stock_uom || 'Unit' }})
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-gray-400 font-bold text-sm">₹</span>
+              <input
+                ref="priceInputRef"
+                v-model.number="editingPriceValue"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0.00"
+                @keydown.enter="submitUpdateItemPrice"
+                class="w-full pl-7 pr-3 py-2 text-sm font-bold text-gray-900 bg-white border border-gray-300 rounded-[11px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            @click="showPriceEditModal = false"
+            class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-[11px] font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            @click="submitUpdateItemPrice"
+            :disabled="isSubmittingPrice || editingPriceValue === '' || editingPriceValue == null"
+            class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-[11px] shadow-sm disabled:opacity-50"
+          >
+            <span v-if="isSubmittingPrice">Updating...</span>
+            <span v-else>Update Price</span>
           </button>
         </div>
       </div>
@@ -785,7 +858,7 @@
       class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4"
     >
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center space-y-4">
-        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-xs">
+        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-[11px] flex items-center justify-center mx-auto text-2xl font-bold shadow-xs">
           ✓
         </div>
         <div>
@@ -830,7 +903,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import InvoicesView from '../components/InvoicesView.vue';
+import PurchaseView from '../components/PurchaseView.vue';
+
+const customerSearchContainer = ref(null);
 
 const currentTab = ref('pos');
 const invoices = ref([]);
@@ -844,11 +921,88 @@ const showCreateVariantModal = ref(false);
 const isSubmittingTemplate = ref(false);
 const isSubmittingVariant = ref(false);
 
+const showPriceEditModal = ref(false);
+const isSubmittingPrice = ref(false);
+const editingItem = ref(null);
+const editingPriceValue = ref('');
+const priceInputRef = ref(null);
+
+function openPriceEditModal(item) {
+  editingItem.value = item;
+  editingPriceValue.value = item.selling_price != null ? item.selling_price : '';
+  showPriceEditModal.value = true;
+  setTimeout(() => {
+    priceInputRef.value?.focus();
+    priceInputRef.value?.select();
+  }, 100);
+}
+
+async function submitUpdateItemPrice() {
+  if (!editingItem.value || editingPriceValue.value === '' || editingPriceValue.value == null) {
+    alert('Please enter a valid price.');
+    return;
+  }
+  const rate = parseFloat(editingPriceValue.value);
+  if (isNaN(rate) || rate < 0) {
+    alert('Please enter a valid positive number for price.');
+    return;
+  }
+  isSubmittingPrice.value = true;
+  try {
+    const res = await fetch('/api/method/tailorms.api.update_item_price', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': window.csrf_token || '',
+      },
+      body: JSON.stringify({
+        item_code: editingItem.value.item_code,
+        rate: rate,
+      }),
+    });
+    const json = await res.json();
+    if (json.message) {
+      editingItem.value.selling_price = rate;
+      const cartItem = cart.value.find((r) => r.item_code === editingItem.value.item_code);
+      if (cartItem) {
+        cartItem.rate = rate;
+      }
+      showPriceEditModal.value = false;
+    } else {
+      alert('Error updating price: ' + JSON.stringify(json._server_messages || json));
+    }
+  } catch (err) {
+    alert('Failed to update price');
+    console.error(err);
+  } finally {
+    isSubmittingPrice.value = false;
+  }
+}
+
 const newTemplateName = ref('');
 const newTemplateUOM = ref('Meter');
 const newVariantTemplate = ref('');
 const newVariantCode = ref('');
 const newVariantPrice = ref('');
+
+const fullVariantCode = computed(() => {
+  if (!newVariantTemplate.value || !newVariantCode.value.trim()) return '';
+  return `${newVariantTemplate.value}-${newVariantCode.value.trim()}`;
+});
+
+const isVariantAlreadyExists = computed(() => {
+  if (!fullVariantCode.value) return false;
+  return items.value.some(
+    (item) => item.item_code.toLowerCase() === fullVariantCode.value.toLowerCase()
+  );
+});
+
+const existingVariantItem = computed(() => {
+  if (!fullVariantCode.value) return null;
+  return items.value.find(
+    (item) => item.item_code.toLowerCase() === fullVariantCode.value.toLowerCase()
+  ) || null;
+});
 
 const searchQuery = ref('');
 const customerSearchInput = ref('');
@@ -869,7 +1023,35 @@ const customers = ref([]);
 const paymentModes = ref(['Cash', 'UPI']);
 const selectedCustomer = ref('');
 const selectedPaymentMode = ref('Cash');
+const splitCashAmount = ref(0);
+const splitUpiAmount = ref(0);
 const cart = ref([]);
+
+function setPaymentMode(mode) {
+  selectedPaymentMode.value = mode;
+  if (mode === 'Split') {
+    const half = Math.round((subtotal.value / 2) * 100) / 100;
+    splitCashAmount.value = half;
+    splitUpiAmount.value = Math.round((subtotal.value - half) * 100) / 100;
+  }
+}
+
+function onSplitCashChange() {
+  const cash = Math.max(0, Number(splitCashAmount.value) || 0);
+  splitCashAmount.value = cash;
+  splitUpiAmount.value = Math.max(0, Math.round((subtotal.value - cash) * 100) / 100);
+}
+
+function onSplitUpiChange() {
+  const upi = Math.max(0, Number(splitUpiAmount.value) || 0);
+  splitUpiAmount.value = upi;
+  splitCashAmount.value = Math.max(0, Math.round((subtotal.value - upi) * 100) / 100);
+}
+
+const splitDifference = computed(() => {
+  const allocated = Number(splitCashAmount.value || 0) + Number(splitUpiAmount.value || 0);
+  return Math.round((subtotal.value - allocated) * 100) / 100;
+});
 
 const selectedCustomerDoc = computed(() => {
   return customers.value.find((c) => c.name === selectedCustomer.value) || null;
@@ -1041,6 +1223,68 @@ function getStockStatus(qty) {
   };
 }
 
+function playAddSound() {
+  try {
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+
+    function chime(freq, startAt, vol = 0.18) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(vol, startAt + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.25);
+      osc.start(startAt);
+      osc.stop(startAt + 0.26);
+    }
+
+    // Two-note tap chime (C6 → E6)
+    chime(1046.5, t);
+    chime(1318.5, t + 0.1);
+
+    // Soft physical tap body underneath
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(90, t + 0.045);
+    oscGain.gain.setValueAtTime(0.10, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  } catch {}
+}
+
+function playPaymentSound() {
+  try {
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+
+    const playNote = (freq, start, duration, volume = 0.12) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+
+    playNote(880, t, 0.12, 0.10);
+    playNote(1318.5, t + 0.09, 0.20, 0.12);
+  } catch {}
+}
+
 function addToCart(item) {
   if (item.is_stock_item && Number(item.actual_qty || 0) <= 0) {
     alert(`Item "${item.item_name || item.item_code}" is out of stock (Available: 0).`);
@@ -1065,21 +1309,40 @@ function addToCart(item) {
       qty: 1,
     });
   }
+  playAddSound();
+}
+
+function updateCartRowQty(idx, rawVal) {
+  const parsed = parseFloat(rawVal);
+  if (isNaN(parsed) || parsed <= 0) {
+    cart.value.splice(idx, 1);
+    return;
+  }
+  const val = Math.round(parsed * 100) / 100;
+  const row = cart.value[idx];
+  const itemDoc = items.value.find((i) => i.item_code === row.item_code);
+  if (itemDoc && itemDoc.is_stock_item && val > Number(itemDoc.actual_qty || 0)) {
+    alert(`Cannot exceed available stock (${itemDoc.actual_qty}).`);
+    row.qty = Number(itemDoc.actual_qty || 0);
+    return;
+  }
+  row.qty = val;
 }
 
 function increaseQty(idx) {
   const row = cart.value[idx];
   const itemDoc = items.value.find((i) => i.item_code === row.item_code);
-  if (itemDoc && itemDoc.is_stock_item && row.qty >= Number(itemDoc.actual_qty || 0)) {
+  const next = Math.round((row.qty + 1) * 100) / 100;
+  if (itemDoc && itemDoc.is_stock_item && next > Number(itemDoc.actual_qty || 0)) {
     alert(`Cannot exceed available stock (${itemDoc.actual_qty}).`);
     return;
   }
-  row.qty += 1;
+  row.qty = next;
 }
 
 function decreaseQty(idx) {
   if (cart.value[idx].qty > 1) {
-    cart.value[idx].qty -= 1;
+    cart.value[idx].qty = Math.round((cart.value[idx].qty - 1) * 100) / 100;
   } else {
     cart.value.splice(idx, 1);
   }
@@ -1113,8 +1376,13 @@ async function loadData() {
 }
 
 async function addNewCustomer() {
-  if (!newCustomerName.value) {
+  if (!newCustomerName.value.trim()) {
     alert('Customer name is required');
+    return;
+  }
+  const cleanMobile = newCustomerMobile.value.trim();
+  if (cleanMobile && cleanMobile.length !== 10) {
+    alert('Mobile number must be exactly 10 digits');
     return;
   }
   try {
@@ -1125,8 +1393,8 @@ async function addNewCustomer() {
         'X-Frappe-CSRF-Token': window.csrf_token || '',
       },
       body: JSON.stringify({
-        customer_name: newCustomerName.value,
-        mobile_no: newCustomerMobile.value,
+        customer_name: newCustomerName.value.trim(),
+        mobile_no: cleanMobile,
       }),
     });
     const json = await res.json();
@@ -1151,6 +1419,35 @@ async function createInvoice() {
 
   isSubmitting.value = true;
   try {
+    let paymentsPayload = [];
+    if (selectedPaymentMode.value === 'Split') {
+      const cash = Number(splitCashAmount.value) || 0;
+      const upi = Number(splitUpiAmount.value) || 0;
+      if (cash > 0) {
+        paymentsPayload.push({
+          mode_of_payment: 'Cash',
+          amount: cash,
+        });
+      }
+      if (upi > 0) {
+        paymentsPayload.push({
+          mode_of_payment: 'UPI',
+          amount: upi,
+        });
+      }
+      if (paymentsPayload.length === 0) {
+        paymentsPayload.push({
+          mode_of_payment: 'Cash',
+          amount: subtotal.value,
+        });
+      }
+    } else {
+      paymentsPayload.push({
+        mode_of_payment: selectedPaymentMode.value || 'Cash',
+        amount: subtotal.value,
+      });
+    }
+
     const payload = {
       customer: selectedCustomer.value,
       items: cart.value.map((r) => ({
@@ -1158,12 +1455,7 @@ async function createInvoice() {
         qty: r.qty,
         rate: r.rate,
       })),
-      payments: [
-        {
-          mode_of_payment: selectedPaymentMode.value || 'Cash',
-          amount: subtotal.value,
-        },
-      ],
+      payments: paymentsPayload,
       update_stock: 0,
     };
 
@@ -1178,6 +1470,7 @@ async function createInvoice() {
 
     const json = await res.json();
     if (json.message && json.message.name) {
+      playPaymentSound();
       lastInvoice.value = json.message;
       showSuccessDialog.value = true;
       cart.value = [];
@@ -1190,6 +1483,12 @@ async function createInvoice() {
   } finally {
     isSubmitting.value = false;
   }
+}
+
+function formatDate(date) {
+  if (!date) return '—';
+  const [y, m, d] = String(date).split('-');
+  return `${d}-${m}-${y}`;
 }
 
 function goToDesk() {
@@ -1210,7 +1509,7 @@ function startNewSale() {
 
 function printInvoice(invoiceName) {
   if (!invoiceName) return;
-  const printUrl = `/printview?doctype=Sales+Invoice&name=${encodeURIComponent(invoiceName)}&format=Standard&no_letterhead=0&letterhead=No+Letterhead`;
+  const printUrl = `/printview?doctype=Sales+Invoice&name=${encodeURIComponent(invoiceName)}&format=${encodeURIComponent('Sales Invoice Bordered')}&no_letterhead=0`;
   window.open(printUrl, '_blank');
 }
 
@@ -1275,7 +1574,30 @@ function refreshCurrentTab() {
   }
 }
 
+function handleGlobalClick(e) {
+  if (
+    isCustomerDropdownOpen.value &&
+    customerSearchContainer.value &&
+    !customerSearchContainer.value.contains(e.target)
+  ) {
+    isCustomerDropdownOpen.value = false;
+  }
+}
+
+function handleGlobalKeydown(e) {
+  if (e.key === 'Escape' && isCustomerDropdownOpen.value) {
+    isCustomerDropdownOpen.value = false;
+  }
+}
+
 onMounted(() => {
   loadData();
+  document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('keydown', handleGlobalKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleGlobalClick);
+  document.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>

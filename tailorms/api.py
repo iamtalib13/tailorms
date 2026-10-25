@@ -179,24 +179,238 @@ def create_sales_invoice(customer, items, payments=None, update_stock=0):
 
 @frappe.whitelist()
 def get_invoices(limit=50):
-	"""Get recent sales invoices."""
-	return frappe.get_all(
-		"Sales Invoice",
-		fields=["name", "customer", "customer_name", "posting_date", "grand_total", "status", "is_pos"],
-		order_by="creation desc",
-		limit=limit,
+	"""Get recent sales invoices with customer mobile."""
+	return frappe.db.sql(
+		"""
+		SELECT
+			si.name, si.customer, si.customer_name,
+			si.posting_date, si.grand_total, si.status,
+			si.modified, c.mobile_no
+		FROM `tabSales Invoice` si
+		LEFT JOIN `tabCustomer` c ON c.name = si.customer
+		ORDER BY si.creation DESC
+		LIMIT %s
+		""",
+		(int(limit),),
+		as_dict=True,
 	)
 
 
 @frappe.whitelist()
+def get_invoice_detail(invoice_name):
+	"""Get invoice with items and payments for popup view."""
+	inv = frappe.get_doc("Sales Invoice", invoice_name)
+	mobile = frappe.db.get_value("Customer", inv.customer, "mobile_no") or ""
+	return {
+		"name": inv.name,
+		"customer": inv.customer,
+		"customer_name": inv.customer_name,
+		"mobile_no": mobile,
+		"posting_date": str(inv.posting_date),
+		"grand_total": inv.grand_total,
+		"status": inv.status,
+		"items": [
+			{
+				"item_code": r.item_code,
+				"item_name": r.item_name,
+				"qty": r.qty,
+				"rate": r.rate,
+				"amount": r.amount,
+				"uom": r.uom or r.stock_uom,
+			}
+			for r in inv.items
+		],
+		"payments": [
+			{"mode_of_payment": p.mode_of_payment, "amount": p.amount}
+			for p in (inv.payments or [])
+		],
+	}
+
+
+@frappe.whitelist()
 def get_stock_entries(limit=50):
-	"""Get recent stock entries."""
-	return frappe.get_all(
-		"Stock Entry",
-		fields=["name", "stock_entry_type", "purpose", "posting_date", "total_amount", "docstatus"],
-		order_by="creation desc",
-		limit=limit,
+	"""Get recent purchase/stock entries with supplier."""
+	return frappe.db.sql(
+		"""
+		SELECT name, stock_entry_type, purpose, posting_date,
+		       total_amount, docstatus, supplier, supplier_name
+		FROM `tabStock Entry`
+		ORDER BY creation DESC
+		LIMIT %s
+		""",
+		(int(limit),),
+		as_dict=True,
 	)
+
+
+@frappe.whitelist()
+def get_purchase_entry_detail(entry_name):
+	"""Get stock entry with items for popup view."""
+	se = frappe.get_doc("Stock Entry", entry_name)
+	return {
+		"name": se.name,
+		"supplier": se.supplier,
+		"supplier_name": se.supplier_name,
+		"stock_entry_type": se.stock_entry_type,
+		"posting_date": str(se.posting_date),
+		"total_amount": float(se.total_amount or 0),
+		"docstatus": se.docstatus,
+		"items": [
+			{
+				"item_code": r.item_code,
+				"item_name": r.item_name,
+				"qty": r.qty,
+				"basic_rate": float(r.basic_rate or 0),
+				"amount": float(r.amount or 0),
+				"uom": r.uom or r.stock_uom,
+				"t_warehouse": r.t_warehouse,
+			}
+			for r in se.items
+		],
+	}
+
+
+@frappe.whitelist()
+def get_suppliers(query=""):
+	"""Search suppliers by name."""
+	filters = {"disabled": 0}
+	or_filters = (
+		[["supplier_name", "like", f"%{query}%"], ["name", "like", f"%{query}%"]]
+		if query
+		else None
+	)
+	return frappe.get_all(
+		"Supplier",
+		filters=filters,
+		or_filters=or_filters,
+		fields=["name", "supplier_name", "supplier_type"],
+		order_by="modified desc",
+		limit=50,
+	)
+
+
+@frappe.whitelist()
+def create_supplier(supplier_name, supplier_type="Company"):
+	"""Quick-create a supplier from POS purchase form."""
+	doc = frappe.new_doc("Supplier")
+	doc.supplier_name = supplier_name
+	doc.supplier_type = supplier_type or "Company"
+	doc.insert(ignore_permissions=True)
+	return {"name": doc.name, "supplier_name": doc.supplier_name, "supplier_type": doc.supplier_type}
+
+
+@frappe.whitelist()
+def save_purchase_draft(supplier, items):
+    """Create a draft Material Receipt Stock Entry without submitting."""
+    if isinstance(items, str):
+        items = frappe.parse_json(items)
+
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    if not company:
+        rows = frappe.get_all("Company", pluck="name", limit=1)
+        company = rows[0] if rows else frappe.throw("No company configured")
+
+    warehouse = _get_default_warehouse(company)
+    if not warehouse:
+        frappe.throw("No warehouse found for company.")
+
+    se = frappe.new_doc("Stock Entry")
+    se.company = company
+    se.stock_entry_type = "Material Receipt"
+    se.purpose = "Material Receipt"
+    se.to_warehouse = warehouse
+    se.supplier = supplier
+    se.supplier_name = frappe.db.get_value("Supplier", supplier, "supplier_name") or supplier
+
+    for row in items:
+        se.append("items", {
+            "item_code": row.get("item_code"),
+            "qty": float(row.get("qty") or 1),
+            "basic_rate": float(row.get("rate") or 0),
+            "t_warehouse": warehouse,
+        })
+
+    se.insert(ignore_permissions=True)
+    return {
+        "name": se.name,
+        "supplier": se.supplier,
+        "supplier_name": se.supplier_name,
+        "total_amount": float(se.total_amount or 0),
+        "docstatus": se.docstatus,
+        "posting_date": str(se.posting_date),
+    }
+
+
+@frappe.whitelist()
+def submit_stock_entry(entry_name):
+    """Submit a saved draft Stock Entry."""
+    se = frappe.get_doc("Stock Entry", entry_name)
+    if se.docstatus != 0:
+        frappe.throw("Entry is not in Draft state.")
+    se.submit()
+    return {"name": se.name, "docstatus": se.docstatus}
+
+
+@frappe.whitelist()
+def create_purchase_entry(supplier, items):
+	"""Create a Material Receipt Stock Entry with supplier for purchase tracking."""
+	if isinstance(items, str):
+		items = frappe.parse_json(items)
+
+	company = frappe.db.get_single_value("Global Defaults", "default_company")
+	if not company:
+		rows = frappe.get_all("Company", pluck="name", limit=1)
+		company = rows[0] if rows else frappe.throw("No company configured")
+
+	warehouse = _get_default_warehouse(company)
+	if not warehouse:
+		frappe.throw("No warehouse found for company. Please create a warehouse first.")
+
+	se = frappe.new_doc("Stock Entry")
+	se.company = company
+	se.stock_entry_type = "Material Receipt"
+	se.purpose = "Material Receipt"
+	se.to_warehouse = warehouse
+	se.supplier = supplier
+	se.supplier_name = frappe.db.get_value("Supplier", supplier, "supplier_name") or supplier
+
+	for row in items:
+		se.append(
+			"items",
+			{
+				"item_code": row.get("item_code"),
+				"qty": float(row.get("qty") or 1),
+				"basic_rate": float(row.get("rate") or 0),
+				"t_warehouse": warehouse,
+			},
+		)
+
+	se.insert(ignore_permissions=True)
+	se.submit()
+
+	return {
+		"name": se.name,
+		"supplier": se.supplier,
+		"supplier_name": se.supplier_name,
+		"total_amount": float(se.total_amount or 0),
+		"docstatus": se.docstatus,
+		"posting_date": str(se.posting_date),
+	}
+
+
+def _get_default_warehouse(company):
+	"""Return best available warehouse for the company."""
+	wh = frappe.db.get_value("Company", company, "default_warehouse")
+	if wh and not frappe.db.get_value("Warehouse", wh, "disabled"):
+		return wh
+	# fallback: first non-group, non-disabled warehouse for the company
+	rows = frappe.get_all(
+		"Warehouse",
+		filters={"company": company, "is_group": 0, "disabled": 0},
+		pluck="name",
+		limit=1,
+	)
+	return rows[0] if rows else None
 
 
 @frappe.whitelist()
@@ -283,3 +497,29 @@ def create_item_variant(template_item, variant_code, selling_price=None, attribu
 		"actual_qty": 0.0,
 		"is_stock_item": variant.is_stock_item,
 	}
+
+
+@frappe.whitelist()
+def update_item_price(item_code, rate):
+	"""Update or create selling Item Price for a given item_code."""
+	rate = float(rate)
+	price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list") or "Standard Selling"
+	
+	existing_ip = frappe.db.get_value(
+		"Item Price",
+		{"item_code": item_code, "price_list": price_list, "selling": 1},
+		"name",
+	)
+	if existing_ip:
+		ip = frappe.get_doc("Item Price", existing_ip)
+		ip.price_list_rate = rate
+		ip.save(ignore_permissions=True)
+	else:
+		ip = frappe.new_doc("Item Price")
+		ip.item_code = item_code
+		ip.price_list = price_list
+		ip.price_list_rate = rate
+		ip.selling = 1
+		ip.insert(ignore_permissions=True)
+
+	return {"item_code": item_code, "selling_price": rate}
