@@ -1,5 +1,11 @@
+import base64
+import re
+
 import frappe
+import requests
 from frappe import _
+
+WHATSAPP_DEFAULT_CAPTION = "Invoice {invoice}\nAmount: {amount}\nThank you for your purchase!"
 
 
 @frappe.whitelist()
@@ -523,3 +529,78 @@ def update_item_price(item_code, rate):
 		ip.insert(ignore_permissions=True)
 
 	return {"item_code": item_code, "selling_price": rate}
+
+
+@frappe.whitelist()
+def send_invoice_whatsapp(invoice_name, mobile_no=None):
+	"""Send a Sales Invoice PDF to the customer through the OpenWA gateway."""
+	settings = _whatsapp_settings()
+	invoice = frappe.get_doc("Sales Invoice", invoice_name)
+	mobile_no = mobile_no or frappe.db.get_value("Customer", invoice.customer, "mobile_no")
+	chat_id = _whatsapp_chat_id(mobile_no, settings.default_country_code)
+	caption = (settings.caption_template or WHATSAPP_DEFAULT_CAPTION).format(
+		invoice=invoice.name,
+		amount=frappe.utils.fmt_money(invoice.grand_total, currency=invoice.currency),
+	)
+
+	response = requests.post(
+		f"{settings.api_url.rstrip('/')}/api/sessions/{settings.session_id}/messages/send-document",
+		headers={"X-API-Key": settings.get_password("api_key")},
+		json={
+			"chatId": chat_id,
+			"base64": base64.b64encode(_invoice_pdf(invoice, settings.print_format)).decode(),
+			"mimetype": "application/pdf",
+			"filename": f"{invoice.name}.pdf",
+			"caption": caption,
+		},
+		timeout=120,
+	)
+	if response.status_code >= 400:
+		frappe.throw(_("WhatsApp send failed: {0}").format(_whatsapp_error(response)))
+
+	message_id = response.json().get("messageId")
+	invoice.add_comment(
+		"Comment",
+		text=_("Invoice {0} sent on WhatsApp to {1}").format(invoice.name, chat_id.split("@")[0]),
+	)
+	return {"message_id": message_id, "mobile": chat_id.split("@")[0], "invoice": invoice.name}
+
+
+def _whatsapp_settings():
+	settings = frappe.get_cached_doc("Tailorms WhatsApp Settings")
+	if not settings.enabled:
+		frappe.throw(_("WhatsApp integration is disabled in Tailorms WhatsApp Settings."))
+	if not (settings.api_url and settings.session_id and settings.get_password("api_key", raise_exception=False)):
+		frappe.throw(_("Complete the Tailorms WhatsApp Settings before sending invoices."))
+	return settings
+
+
+def _whatsapp_chat_id(mobile_no, country_code="91"):
+	digits = re.sub(r"\D", "", str(mobile_no or ""))
+	if not digits:
+		frappe.throw(_("Customer has no mobile number. Enter a WhatsApp number to send the invoice."))
+
+	code = re.sub(r"\D", "", str(country_code or "91")) or "91"
+	if len(digits) == 10:
+		digits = code + digits
+	elif len(digits) == 11 and digits.startswith("0"):
+		digits = code + digits[1:]
+	if not 10 <= len(digits) <= 15:
+		frappe.throw(_("Invalid WhatsApp number: {0}").format(mobile_no))
+	return f"{digits}@c.us"
+
+
+def _invoice_pdf(invoice, print_format=None):
+	if print_format and frappe.db.exists("Print Format", print_format):
+		html = frappe.get_print("Sales Invoice", invoice.name, print_format=print_format)
+	else:
+		html = frappe.get_print("Sales Invoice", invoice.name)
+	return frappe.utils.pdf.get_pdf(html)
+
+
+def _whatsapp_error(response):
+	try:
+		data = response.json()
+	except ValueError:
+		return response.text[:200]
+	return data.get("message") or data.get("error") or response.text[:200]

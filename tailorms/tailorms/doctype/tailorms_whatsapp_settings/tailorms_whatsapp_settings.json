@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-29 00:40:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "api_url",
+  "api_key",
+  "session_id",
+  "default_country_code",
+  "print_format",
+  "caption_template"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "http://127.0.0.1:2785",
+   "fieldname": "api_url",
+   "fieldtype": "Data",
+   "label": "OpenWA API URL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "API Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "session_id",
+   "fieldtype": "Data",
+   "label": "Session ID",
+   "reqd": 1
+  },
+  {
+   "default": "91",
+   "description": "Prefixed to 10-digit mobile numbers.",
+   "fieldname": "default_country_code",
+   "fieldtype": "Data",
+   "label": "Default Country Code"
+  },
+  {
+   "default": "Sales Invoice Bordered",
+   "fieldname": "print_format",
+   "fieldtype": "Data",
+   "label": "Print Format"
+  },
+  {
+   "default": "Invoice {invoice}\nAmount: {amount}\nThank you for your purchase!",
+   "fieldname": "caption_template",
+   "fieldtype": "Small Text",
+   "label": "Message Caption",
+   "description": "Available placeholders: {invoice}, {amount}"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-29 00:40:00.000000",
+ "modified_by": "Administrator",
+ "module": "Tailorms",
+ "name": "Tailorms WhatsApp Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

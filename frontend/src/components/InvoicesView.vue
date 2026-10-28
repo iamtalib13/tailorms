@@ -73,14 +73,25 @@
               ₹{{ Number(inv.grand_total).toFixed(2) }}
             </td>
             <td class="py-3 px-6 text-center" @click.stop>
-              <button
-                @click="openPrint(inv.name)"
-                class="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-[11px] transition inline-flex items-center gap-1.5 shadow-2xs border border-blue-200"
-                title="Print Invoice"
-              >
-                <span class="lucide-printer size-3.5" />
-                <span>Print</span>
-              </button>
+              <div class="flex items-center justify-center gap-1.5">
+                <button
+                  @click="openPrint(inv.name)"
+                  class="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-[11px] transition inline-flex items-center gap-1.5 shadow-2xs border border-blue-200"
+                  title="Print Invoice"
+                >
+                  <span class="lucide-printer size-3.5" />
+                  <span>Print</span>
+                </button>
+                <button
+                  @click="sendWhatsApp(inv)"
+                  :disabled="sendingInvoice === inv.name"
+                  class="px-3 py-1.5 text-xs font-bold bg-green-50 text-green-700 hover:bg-green-100 rounded-[11px] transition inline-flex items-center gap-1.5 shadow-2xs border border-green-200 disabled:opacity-50"
+                  title="Send Invoice on WhatsApp"
+                >
+                  <span class="lucide-send size-3.5" />
+                  <span>{{ sendingInvoice === inv.name ? 'Sending...' : 'WhatsApp' }}</span>
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="filteredInvoices.length === 0">
@@ -189,6 +200,14 @@
             class="px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-[11px] font-medium"
           >Close</button>
           <button
+            @click="sendWhatsApp(detail)"
+            :disabled="sendingInvoice === detail.name"
+            class="px-4 py-1.5 text-xs font-bold bg-green-600 hover:bg-green-700 text-white rounded-[11px] shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <span class="lucide-send size-3.5" />
+            <span>{{ sendingInvoice === detail.name ? 'Sending...' : 'Send WhatsApp' }}</span>
+          </button>
+          <button
             @click="showPrintPreview = true"
             class="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-[11px] shadow-xs flex items-center gap-1.5"
           >
@@ -240,6 +259,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { callMethod } from '../utils/api';
 
 const props = defineProps({
   invoices: { type: Array, default: () => [] },
@@ -253,6 +273,7 @@ const toDate = ref('');
 const showDetail = ref(false);
 const detailLoading = ref(false);
 const detail = ref(null);
+const sendingInvoice = ref('');
 
 function formatDate(date) {
   if (!date) return '—';
@@ -316,6 +337,23 @@ const printIframe = ref(null);
 
 function printInvoice(name) {
   emit('print', name);
+}
+
+async function sendWhatsApp(inv) {
+  if (!inv?.name || sendingInvoice.value) return;
+  if (!(inv.mobile_no || '').replace(/\D/g, '')) {
+    alert('This customer has no mobile number. Add it in the Customer record first.');
+    return;
+  }
+  sendingInvoice.value = inv.name;
+  try {
+    const result = await callMethod('tailorms.api.send_invoice_whatsapp', { invoice_name: inv.name });
+    alert(`Invoice ${inv.name} sent on WhatsApp to ${result.mobile}`);
+  } catch (err) {
+    alert('WhatsApp send failed: ' + err.message);
+  } finally {
+    sendingInvoice.value = '';
+  }
 }
 
 async function openPrint(name) {

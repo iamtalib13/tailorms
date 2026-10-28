@@ -881,6 +881,30 @@
           </div>
         </div>
 
+        <div class="border-t border-gray-200 pt-3 text-left space-y-2">
+          <label class="text-[11px] font-bold text-gray-600">Send invoice on WhatsApp</label>
+          <div class="flex gap-2">
+            <input
+              v-model="whatsappNumber"
+              type="tel"
+              inputmode="numeric"
+              placeholder="10-digit mobile number"
+              @input="whatsappNumber = whatsappNumber.replace(/\D/g, '').slice(0, 10)"
+              class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-[11px] focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+            />
+            <button
+              @click="sendInvoiceWhatsApp"
+              :disabled="isSendingWhatsApp || whatsappNumber.length < 10"
+              class="px-4 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-[11px] shadow-sm disabled:opacity-50 transition"
+            >
+              <span v-if="isSendingWhatsApp">Sending...</span>
+              <span v-else>Send PDF</span>
+            </button>
+          </div>
+          <p v-if="whatsappMessage" class="text-[11px] font-semibold text-green-600">✓ {{ whatsappMessage }}</p>
+          <p v-if="whatsappError" class="text-[11px] font-semibold text-red-500">{{ whatsappError }}</p>
+        </div>
+
         <div class="flex gap-2">
           <button
             v-if="lastInvoice?.name"
@@ -906,6 +930,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import InvoicesView from '../components/InvoicesView.vue';
 import PurchaseView from '../components/PurchaseView.vue';
+import { callMethod } from '../utils/api';
 
 const customerSearchContainer = ref(null);
 
@@ -1014,6 +1039,10 @@ const showSuccessDialog = ref(false);
 const showAddCustomer = ref(false);
 
 const lastInvoice = ref(null);
+const whatsappNumber = ref('');
+const isSendingWhatsApp = ref(false);
+const whatsappMessage = ref('');
+const whatsappError = ref('');
 const newCustomerName = ref('');
 const newCustomerMobile = ref('');
 
@@ -1472,6 +1501,9 @@ async function createInvoice() {
     if (json.message && json.message.name) {
       playPaymentSound();
       lastInvoice.value = json.message;
+      whatsappNumber.value = (selectedCustomerDoc.value?.mobile_no || '').replace(/\D/g, '').slice(-10);
+      whatsappMessage.value = '';
+      whatsappError.value = '';
       showSuccessDialog.value = true;
       cart.value = [];
     } else {
@@ -1504,6 +1536,9 @@ function startNewSale() {
   selectedTemplate.value = '';
   selectedPaymentMode.value = paymentModes.value[0] || 'Cash';
   lastInvoice.value = null;
+  whatsappNumber.value = '';
+  whatsappMessage.value = '';
+  whatsappError.value = '';
   loadData();
 }
 
@@ -1511,6 +1546,24 @@ function printInvoice(invoiceName) {
   if (!invoiceName) return;
   const printUrl = `/printview?doctype=Sales+Invoice&name=${encodeURIComponent(invoiceName)}&format=${encodeURIComponent('Sales Invoice Bordered')}&no_letterhead=0`;
   window.open(printUrl, '_blank');
+}
+
+async function sendInvoiceWhatsApp() {
+  if (!lastInvoice.value?.name || isSendingWhatsApp.value) return;
+  isSendingWhatsApp.value = true;
+  whatsappMessage.value = '';
+  whatsappError.value = '';
+  try {
+    const result = await callMethod('tailorms.api.send_invoice_whatsapp', {
+      invoice_name: lastInvoice.value.name,
+      mobile_no: whatsappNumber.value,
+    });
+    whatsappMessage.value = `Invoice sent to ${result.mobile}`;
+  } catch (err) {
+    whatsappError.value = err.message;
+  } finally {
+    isSendingWhatsApp.value = false;
+  }
 }
 
 async function loadInvoices() {
