@@ -32,7 +32,18 @@
             <span class="text-[10px] mt-1 leading-tight tracking-tight">Invoices</span>
           </button>
 
-          <!-- 3. Purchase Entry -->
+          <!-- 3. Customers -->
+          <button
+            @click="switchTab('customers')"
+            :class="currentTab === 'customers' ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'"
+            class="w-full flex flex-col items-center justify-center py-2 rounded-xl transition group"
+            title="Customers"
+          >
+            <span class="lucide-users size-5" />
+            <span class="text-[9.5px] mt-1 leading-tight tracking-tight">Customers</span>
+          </button>
+
+          <!-- 4. Purchase Entry -->
           <button
             @click="switchTab('stock')"
             :class="currentTab === 'stock' ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'"
@@ -569,7 +580,13 @@
         @print="printInvoice"
       />
 
-      <!-- View 3: Purchase Entries (component) -->
+      <!-- View 3: Customers List View -->
+      <CustomersView
+        v-show="currentTab === 'customers'"
+        @print="printInvoice"
+      />
+
+      <!-- View 4: Purchase Entries (component) -->
       <PurchaseView
         v-show="currentTab === 'stock'"
         :entries="stockEntries"
@@ -929,6 +946,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import InvoicesView from '../components/InvoicesView.vue';
+import CustomersView from '../components/CustomersView.vue';
 import PurchaseView from '../components/PurchaseView.vue';
 import { callMethod } from '../utils/api';
 
@@ -1638,8 +1656,20 @@ function handleGlobalClick(e) {
 }
 
 function handleGlobalKeydown(e) {
-  if (e.key === 'Escape' && isCustomerDropdownOpen.value) {
-    isCustomerDropdownOpen.value = false;
+  if (e.key === 'Escape') {
+    if (showSuccessDialog.value) {
+      closeSuccessDialog();
+    } else if (showPriceEditModal.value) {
+      showPriceEditModal.value = false;
+    } else if (showCreateVariantModal.value) {
+      showCreateVariantModal.value = false;
+    } else if (showCreateTemplateModal.value) {
+      showCreateTemplateModal.value = false;
+    } else if (showAddCustomer.value) {
+      showAddCustomer.value = false;
+    } else if (isCustomerDropdownOpen.value) {
+      isCustomerDropdownOpen.value = false;
+    }
   }
 }
 

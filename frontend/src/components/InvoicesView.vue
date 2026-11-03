@@ -258,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { callMethod } from '../utils/api';
 
 const props = defineProps({
@@ -384,4 +384,22 @@ function doPrint() {
     iframe.contentWindow.print();
   }
 }
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    if (showPrintPreview.value) {
+      showPrintPreview.value = false;
+    } else if (showDetail.value) {
+      showDetail.value = false;
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleEscKey);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscKey);
+});
 </script>

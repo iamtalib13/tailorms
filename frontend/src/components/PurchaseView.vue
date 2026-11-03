@@ -367,7 +367,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 const props = defineProps({
   entries: { type: Array, default: () => [] },
@@ -611,4 +611,22 @@ async function submitEntry() {
     isSubmitting.value = false;
   }
 }
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    if (showAddSupplier.value) {
+      showAddSupplier.value = false;
+    } else if (showForm.value) {
+      showForm.value = false;
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleEscKey);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscKey);
+});
 </script>

@@ -234,6 +234,78 @@ def get_invoice_detail(invoice_name):
 
 
 @frappe.whitelist()
+def get_customer_list(search=None, limit=100):
+	"""Get customers list with aggregated total invoices and total spent."""
+	conditions = ["c.disabled = 0"]
+	values = []
+	if search and search.strip():
+		s = f"%{search.strip()}%"
+		conditions.append("(c.name LIKE %s OR c.customer_name LIKE %s OR c.mobile_no LIKE %s)")
+		values.extend([s, s, s])
+
+	where_clause = " AND ".join(conditions)
+	values.append(int(limit))
+
+	return frappe.db.sql(
+		f"""
+		SELECT
+			c.name,
+			c.customer_name,
+			c.mobile_no,
+			c.email_id,
+			c.customer_group,
+			c.territory,
+			c.creation,
+			COUNT(si.name) AS total_invoices,
+			COALESCE(SUM(CASE WHEN si.docstatus = 1 THEN si.grand_total ELSE 0 END), 0) AS total_spent,
+			COALESCE(SUM(CASE WHEN si.docstatus = 1 THEN si.outstanding_amount ELSE 0 END), 0) AS total_outstanding
+		FROM `tabCustomer` c
+		LEFT JOIN `tabSales Invoice` si ON si.customer = c.name
+		WHERE {where_clause}
+		GROUP BY c.name
+		ORDER BY total_spent DESC, c.modified DESC
+		LIMIT %s
+		""",
+		values,
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def get_customer_details(customer):
+	"""Get single customer profile details and their complete invoices."""
+	if not frappe.db.exists("Customer", customer):
+		frappe.throw(_("Customer {0} not found").format(customer))
+
+	cust = frappe.get_doc("Customer", customer)
+	invoices = frappe.db.sql(
+		"""
+		SELECT
+			name, posting_date, grand_total, outstanding_amount,
+			status, docstatus, modified
+		FROM `tabSales Invoice`
+		WHERE customer = %s
+		ORDER BY posting_date DESC, creation DESC
+		LIMIT 100
+		""",
+		(customer,),
+		as_dict=True,
+	)
+
+	return {
+		"name": cust.name,
+		"customer_name": cust.customer_name,
+		"mobile_no": cust.mobile_no or "",
+		"email_id": cust.email_id or "",
+		"customer_group": cust.customer_group or "",
+		"territory": cust.territory or "",
+		"primary_address": cust.primary_address or "",
+		"creation": str(cust.creation),
+		"invoices": invoices,
+	}
+
+
+@frappe.whitelist()
 def get_stock_entries(limit=50):
 	"""Get recent purchase/stock entries with supplier."""
 	return frappe.db.sql(
@@ -595,7 +667,7 @@ def _invoice_pdf(invoice, print_format=None):
 		html = frappe.get_print("Sales Invoice", invoice.name, print_format=print_format)
 	else:
 		html = frappe.get_print("Sales Invoice", invoice.name)
-	return frappe.utils.pdf.get_pdf(html)
+	return frappe.utils.pdf.get_pdf(html, smart_shrinking=True)
 
 
 def _whatsapp_error(response):
