@@ -148,9 +148,10 @@
         <!-- Modal Top Header -->
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white shrink-0">
           <div class="flex items-center gap-3">
-            <div class="size-11 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-base shadow-sm">
-              {{ (activeCustomer.customer_name || activeCustomer.name || '?').charAt(0).toUpperCase() }}
+            <div class="size-11 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-base shadow-sm shrink-0">
+              {{ (isEditingCustomer ? editCustomerName : (activeCustomer.customer_name || activeCustomer.name || '?')).charAt(0).toUpperCase() }}
             </div>
+
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="text-base font-bold text-gray-900">
@@ -166,13 +167,79 @@
             </div>
           </div>
 
-          <button
-            @click="closeCustomerModal"
-            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
-            title="Close"
-          >
-            ✕
-          </button>
+          <div class="flex items-center gap-2">
+            <Button
+              v-if="!isEditingCustomer"
+              variant="subtle"
+              size="sm"
+              @click="startEditCustomer"
+            >
+              <template #prefix>
+                <span class="lucide-pencil size-3.5" />
+              </template>
+              Edit Details
+            </Button>
+            <Button
+              v-else
+              variant="outline"
+              size="sm"
+              @click="isEditingCustomer = false"
+            >
+              Cancel
+            </Button>
+
+            <button
+              @click="closeCustomerModal"
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Inline Edit Section with Frappe UI Form Controls -->
+        <div v-if="isEditingCustomer" class="px-6 py-3.5 bg-blue-50/40 border-b border-blue-100 shrink-0">
+          <div class="flex flex-col sm:flex-row items-end gap-3 max-w-2xl">
+            <div class="flex-1 w-full">
+              <FormControl
+                label="Customer Name"
+                type="text"
+                size="sm"
+                v-model="editCustomerName"
+                placeholder="Enter customer full name"
+                required
+              />
+            </div>
+            <div class="w-full sm:w-56">
+              <FormControl
+                label="Mobile Number"
+                type="text"
+                size="sm"
+                v-model="editCustomerMobile"
+                placeholder="10 digit mobile"
+              />
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <Button
+                variant="solid"
+                theme="blue"
+                size="sm"
+                :loading="isSavingCustomer"
+                :disabled="isSavingCustomer || !editCustomerName.trim()"
+                @click="saveCustomerChanges"
+              >
+                Save Changes
+              </Button>
+              <Button
+                variant="subtle"
+                size="sm"
+                @click="isEditingCustomer = false"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Summary Cards -->
@@ -368,6 +435,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { FormControl, Button } from 'frappe-ui';
 
 const emit = defineEmits(['print']);
 
@@ -381,6 +449,48 @@ const loadingDetail = ref(false);
 const selectedInvoiceName = ref('');
 const selectedInvoiceDetail = ref(null);
 const selectedInvoiceLoading = ref(false);
+
+const isEditingCustomer = ref(false);
+const editCustomerName = ref('');
+const editCustomerMobile = ref('');
+const isSavingCustomer = ref(false);
+
+function startEditCustomer() {
+  if (!activeCustomer.value) return;
+  editCustomerName.value = activeCustomer.value.customer_name || activeCustomer.value.name;
+  editCustomerMobile.value = activeCustomer.value.mobile_no || '';
+  isEditingCustomer.value = true;
+}
+
+async function saveCustomerChanges() {
+  if (!activeCustomer.value || !editCustomerName.value.trim()) return;
+  isSavingCustomer.value = true;
+  try {
+    const res = await fetch('/api/method/tailorms.api.update_customer_basic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': window.csrf_token || '',
+      },
+      body: JSON.stringify({
+        customer: activeCustomer.value.name,
+        customer_name: editCustomerName.value.trim(),
+        mobile_no: editCustomerMobile.value.trim(),
+      }),
+    });
+    const json = await res.json();
+    if (json.message) {
+      activeCustomer.value.customer_name = json.message.customer_name;
+      activeCustomer.value.mobile_no = json.message.mobile_no;
+      isEditingCustomer.value = false;
+      fetchCustomers();
+    }
+  } catch (err) {
+    alert('Failed to update customer: ' + err.message);
+  } finally {
+    isSavingCustomer.value = false;
+  }
+}
 
 const filteredCustomers = computed(() => {
   if (!searchQuery.value.trim()) return customers.value;
@@ -444,6 +554,9 @@ async function fetchCustomers() {
 
 async function openCustomerDetail(customerName) {
   loadingDetail.value = true;
+  isEditingCustomer.value = false;
+  editCustomerName.value = '';
+  editCustomerMobile.value = '';
   selectedInvoiceName.value = '';
   selectedInvoiceDetail.value = null;
   activeCustomer.value = { name: customerName, customer_name: customerName, invoices: [] };

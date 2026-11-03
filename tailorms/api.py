@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 
 import frappe
@@ -302,6 +303,56 @@ def get_customer_details(customer):
 		"primary_address": cust.primary_address or "",
 		"creation": str(cust.creation),
 		"invoices": invoices,
+	}
+
+
+@frappe.whitelist()
+def update_customer_basic(customer, customer_name, mobile_no=None):
+	"""Update customer name and mobile number directly, keeping Primary Contact synced."""
+	if not frappe.db.exists("Customer", customer):
+		frappe.throw(_("Customer {0} not found").format(customer))
+
+	cust = frappe.get_doc("Customer", customer)
+	customer_name = customer_name.strip()
+	mobile_no = (mobile_no or "").strip()
+
+	cust.customer_name = customer_name
+	cust.db_set("customer_name", customer_name)
+	cust.db_set("mobile_no", mobile_no)
+
+	# If customer has a linked primary contact, update contact's phone and mobile
+	if cust.customer_primary_contact and frappe.db.exists("Contact", cust.customer_primary_contact):
+		contact = frappe.get_doc("Contact", cust.customer_primary_contact)
+		contact.first_name = customer_name
+		contact.mobile_no = mobile_no
+		contact.phone_nos = []
+		if mobile_no:
+			contact.append("phone_nos", {
+				"phone": mobile_no,
+				"is_primary_mobile_no": 1,
+				"is_primary_phone": 1,
+			})
+		contact.save(ignore_permissions=True)
+	elif mobile_no:
+		# Create primary contact if missing
+		from erpnext.selling.doctype.customer.customer import make_contact
+		contact = make_contact(cust)
+		contact.mobile_no = mobile_no
+		contact.phone_nos = []
+		contact.append("phone_nos", {
+			"phone": mobile_no,
+			"is_primary_mobile_no": 1,
+			"is_primary_phone": 1,
+		})
+		contact.save(ignore_permissions=True)
+		cust.db_set("customer_primary_contact", contact.name)
+
+	frappe.db.commit()
+
+	return {
+		"name": cust.name,
+		"customer_name": customer_name,
+		"mobile_no": mobile_no,
 	}
 
 
@@ -676,3 +727,267 @@ def _whatsapp_error(response):
 	except ValueError:
 		return response.text[:200]
 	return data.get("message") or data.get("error") or response.text[:200]
+
+
+# -----------------------------------------------------------------------------
+# WhatsApp Marketing / Broadcast APIs
+# -----------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_whatsapp_templates():
+	"""Get all active marketing templates."""
+	return frappe.get_all(
+		"Tailorms WhatsApp Template",
+		filters={"is_active": 1},
+		fields=["name", "template_name", "message", "image", "modified"],
+		order_by="modified desc",
+	)
+
+
+@frappe.whitelist()
+def save_whatsapp_template(template_name, message, image=None, is_active=1):
+	"""Create or update a WhatsApp Template."""
+	if not template_name or not template_name.strip():
+		frappe.throw(_("Template Name is required"))
+	if not message or not message.strip():
+		frappe.throw(_("Message content is required"))
+
+	template_name = template_name.strip()
+	if frappe.db.exists("Tailorms WhatsApp Template", template_name):
+		doc = frappe.get_doc("Tailorms WhatsApp Template", template_name)
+		doc.message = message
+		doc.image = image
+		doc.is_active = int(is_active)
+		doc.save(ignore_permissions=True)
+	else:
+		doc = frappe.get_doc({
+			"doctype": "Tailorms WhatsApp Template",
+			"template_name": template_name,
+			"message": message,
+			"image": image,
+			"is_active": int(is_active),
+		})
+		doc.insert(ignore_permissions=True)
+
+	return doc.as_dict()
+
+
+@frappe.whitelist()
+def get_whatsapp_campaigns(limit=20):
+	"""Get recent campaign history with recipient summaries."""
+	campaigns = frappe.get_all(
+		"Tailorms WhatsApp Campaign",
+		fields=[
+			"name", "campaign_name", "template", "status",
+			"total_recipients", "sent_count", "failed_count",
+			"creation", "modified", "image", "message_preview"
+		],
+		order_by="creation desc",
+		limit=int(limit),
+	)
+	return campaigns
+
+
+@frappe.whitelist()
+def get_campaign_detail(campaign_name):
+	"""Get campaign details with full recipient logs."""
+	if not frappe.db.exists("Tailorms WhatsApp Campaign", campaign_name):
+		frappe.throw(_("Campaign {0} not found").format(campaign_name))
+
+	doc = frappe.get_doc("Tailorms WhatsApp Campaign", campaign_name)
+	return {
+		"name": doc.name,
+		"campaign_name": doc.campaign_name,
+		"template": doc.template,
+		"status": doc.status,
+		"total_recipients": doc.total_recipients,
+		"sent_count": doc.sent_count,
+		"failed_count": doc.failed_count,
+		"image": doc.image,
+		"message_preview": doc.message_preview,
+		"creation": str(doc.creation),
+		"recipients": [
+			{
+				"customer": r.customer,
+				"customer_name": r.customer_name,
+				"mobile_no": r.mobile_no,
+				"status": r.status,
+				"sent_at": str(r.sent_at) if r.sent_at else None,
+				"error_message": r.error_message,
+			}
+			for r in doc.recipients
+		],
+	}
+
+
+@frappe.whitelist()
+def start_whatsapp_campaign(campaign_name, message, image=None, template=None, customer_names=None):
+	"""Create campaign and enqueue background sending process."""
+	settings = _whatsapp_settings()
+
+	if isinstance(customer_names, str):
+		customer_names = json.loads(customer_names)
+
+	if not customer_names or not len(customer_names):
+		frappe.throw(_("Please select at least one customer"))
+
+	# Fetch valid customers with mobile numbers
+	customers = frappe.db.sql(
+		"""
+		SELECT name, customer_name, mobile_no
+		FROM `tabCustomer`
+		WHERE name IN %s AND disabled = 0 AND mobile_no IS NOT NULL AND mobile_no != ''
+		""",
+		(tuple(customer_names),),
+		as_dict=True,
+	)
+
+	if not customers:
+		frappe.throw(_("None of the selected customers have a valid mobile number"))
+
+	campaign = frappe.new_doc("Tailorms WhatsApp Campaign")
+	campaign.campaign_name = campaign_name or f"Campaign {frappe.utils.now_datetime().strftime('%d %b %Y %H:%M')}"
+	campaign.template = template if template and frappe.db.exists("Tailorms WhatsApp Template", template) else None
+	campaign.image = image
+	campaign.message_preview = message[:500] if message else ""
+	campaign.status = "Queued"
+	campaign.total_recipients = len(customers)
+	campaign.sent_count = 0
+	campaign.failed_count = 0
+
+	for c in customers:
+		campaign.append("recipients", {
+			"customer": c.name,
+			"customer_name": c.customer_name or c.name,
+			"mobile_no": c.mobile_no,
+			"status": "Queued",
+		})
+
+	campaign.insert(ignore_permissions=True)
+
+	# Enqueue campaign background worker
+	frappe.enqueue(
+		"tailorms.api.process_whatsapp_campaign",
+		queue="default",
+		timeout=3600,
+		campaign_name=campaign.name,
+		raw_message=message,
+		image_url=image,
+	)
+
+	return {"campaign": campaign.name, "total_recipients": len(customers)}
+
+
+def process_whatsapp_campaign(campaign_name, raw_message, image_url=None):
+	"""Background worker that delivers WhatsApp marketing messages with jitter delay."""
+	import time
+	import random
+
+	try:
+		campaign = frappe.get_doc("Tailorms WhatsApp Campaign", campaign_name)
+	except Exception:
+		return
+
+	campaign.status = "In Progress"
+	campaign.save(ignore_permissions=True)
+	frappe.db.commit()
+
+	settings = _whatsapp_settings()
+	api_key = settings.get_password("api_key")
+	base_url = settings.api_url.rstrip("/")
+	session_id = settings.session_id
+
+	# Prepare base64 image if attached
+	image_base64 = None
+	image_mimetype = "image/jpeg"
+	if image_url:
+		try:
+			from frappe.utils.file_manager import get_file_path
+
+			fpath = get_file_path(image_url)
+			if fpath and os.path.exists(fpath):
+				with open(fpath, "rb") as img_file:
+					image_base64 = base64.b64encode(img_file.read()).decode()
+			else:
+				# Fallback: search File doctype
+				file_docs = frappe.get_all(
+					"File",
+					filters={"file_url": image_url},
+					fields=["name"],
+					limit=1,
+				)
+				if file_docs:
+					content = frappe.get_doc("File", file_docs[0].name).get_content()
+					image_base64 = base64.b64encode(content).decode()
+
+			if image_url.lower().endswith(".png"):
+				image_mimetype = "image/png"
+			elif image_url.lower().endswith(".webp"):
+				image_mimetype = "image/webp"
+		except Exception as e:
+			frappe.log_error(f"Failed to read campaign image: {e}", "WhatsApp Campaign Image")
+
+	sent = 0
+	failed = 0
+
+	for row in campaign.recipients:
+		if row.status == "Sent":
+			continue
+
+		cust_name = row.customer_name or row.customer
+		mobile = row.mobile_no
+
+		try:
+			chat_id = _whatsapp_chat_id(mobile, settings.default_country_code)
+			personalized_text = raw_message.replace("{customer_name}", cust_name).replace("{mobile_no}", str(mobile))
+
+			if image_base64:
+				resp = requests.post(
+					f"{base_url}/api/sessions/{session_id}/messages/send-image",
+					headers={"X-API-Key": api_key},
+					json={
+						"chatId": chat_id,
+						"base64": image_base64,
+						"mimetype": image_mimetype,
+						"caption": personalized_text,
+					},
+					timeout=60,
+				)
+			else:
+				resp = requests.post(
+					f"{base_url}/api/sessions/{session_id}/messages/send-text",
+					headers={"X-API-Key": api_key},
+					json={
+						"chatId": chat_id,
+						"text": personalized_text,
+					},
+					timeout=60,
+				)
+
+			if resp.status_code < 400:
+				row.status = "Sent"
+				row.sent_at = frappe.utils.now_datetime()
+				row.error_message = None
+				sent += 1
+			else:
+				row.status = "Failed"
+				row.error_message = _whatsapp_error(resp)
+				failed += 1
+
+		except Exception as err:
+			row.status = "Failed"
+			row.error_message = str(err)[:200]
+			failed += 1
+
+		campaign.sent_count = sent
+		campaign.failed_count = failed
+		campaign.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		# Fast non-blocking delay: 1 to 2 seconds between recipients
+		time.sleep(random.uniform(1.0, 2.0))
+
+	campaign.status = "Completed" if failed == 0 else ("Completed with Failures" if sent > 0 else "Failed")
+	campaign.save(ignore_permissions=True)
+	frappe.db.commit()
+

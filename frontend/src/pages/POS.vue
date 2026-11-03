@@ -43,7 +43,18 @@
             <span class="text-[9.5px] mt-1 leading-tight tracking-tight">Customers</span>
           </button>
 
-          <!-- 4. Purchase Entry -->
+          <!-- 4. Marketing -->
+          <button
+            @click="switchTab('marketing')"
+            :class="currentTab === 'marketing' ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'"
+            class="w-full flex flex-col items-center justify-center py-2 rounded-xl transition group"
+            title="WhatsApp Marketing"
+          >
+            <span class="lucide-megaphone size-5" />
+            <span class="text-[9px] mt-1 leading-tight tracking-tight">Marketing</span>
+          </button>
+
+          <!-- 5. Purchase Entry -->
           <button
             @click="switchTab('stock')"
             :class="currentTab === 'stock' ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'"
@@ -586,7 +597,12 @@
         @print="printInvoice"
       />
 
-      <!-- View 4: Purchase Entries (component) -->
+      <!-- View 4: WhatsApp Marketing View -->
+      <MarketingView
+        v-show="currentTab === 'marketing'"
+      />
+
+      <!-- View 5: Purchase Entries (component) -->
       <PurchaseView
         v-show="currentTab === 'stock'"
         :entries="stockEntries"
@@ -947,6 +963,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import InvoicesView from '../components/InvoicesView.vue';
 import CustomersView from '../components/CustomersView.vue';
+import MarketingView from '../components/MarketingView.vue';
 import PurchaseView from '../components/PurchaseView.vue';
 import { callMethod } from '../utils/api';
 
